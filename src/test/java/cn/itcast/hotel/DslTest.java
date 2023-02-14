@@ -8,6 +8,9 @@ import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.CompletionSuggest;
+import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
+import co.elastic.clients.elasticsearch.core.search.Suggestion;
 import co.elastic.clients.json.JsonData;
 import co.elastic.clients.util.NamedValue;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -85,7 +88,13 @@ public class DslTest {
                                         .size(10)))).build();
 
         SearchResponse<HotelDoc> response = client.search(request, HotelDoc.class);
-        System.out.println(response.suggest());
-
+        Map<String, List<Suggestion<HotelDoc>>> suggest = response.suggest();
+        List<Suggestion<HotelDoc>> mySuggest = suggest.get("mySuggest");
+        for (Suggestion<HotelDoc> hotelDocSuggestion : mySuggest) {
+            for (CompletionSuggestOption<HotelDoc> option : hotelDocSuggestion.completion().options()) {
+                String text = option.text();
+                System.out.println(text);
+            }
+        }
     }
 }

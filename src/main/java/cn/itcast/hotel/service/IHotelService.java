@@ -23,4 +23,11 @@ public interface IHotelService extends IService<Hotel> {
      * @return
      */
     public Map<String, List<String>> filters(RequestParams params);
+
+    /**
+     * 搜索框自动补全接口
+     * @param prefix
+     * @return
+     */
+    List<String> getSuggestions(String prefix);
 }

@@ -17,7 +17,9 @@ import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch.core.search.Suggestion;
 import co.elastic.clients.json.JsonData;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
@@ -92,6 +94,42 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         result.put("brand", getList(aggregations,"brand_agg"));
         result.put("starName", getList(aggregations,"star_agg"));
         return result;
+    }
+
+    @Override
+    public List<String> getSuggestions(String prefix) {
+        //创建suggestion构造器
+        SearchRequest request = new SearchRequest.Builder()
+                //索引
+                .index("hotel")
+                //suggest条件
+                .suggest(s -> s
+                        //查询结果为mySuggest
+                        .suggesters("mySuggest", ss -> ss
+                                //前缀
+                                .prefix(prefix)
+                                //completion条件
+                                .completion(c -> c
+                                        .field("suggestion")
+                                        .skipDuplicates(true)
+                                        .size(10)))).build();
+        //2.发送请求
+        SearchResponse<HotelDoc> response = null;
+        try {
+            response = client.search(request, HotelDoc.class);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        //3.获取mySuggest结果
+        List<Suggestion<HotelDoc>> mySuggest = response.suggest().get("mySuggest");
+        List<String> list = new ArrayList<>();
+        for (Suggestion<HotelDoc> hotelDocSuggestion : mySuggest) {
+            for (CompletionSuggestOption<HotelDoc> option : hotelDocSuggestion.completion().options()) {
+                String text = option.text();
+                list.add(text);
+            }
+        }
+        return list;
     }
 
     /**
