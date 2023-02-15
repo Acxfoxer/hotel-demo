@@ -11,6 +11,12 @@ spring:
     password: 123456
     connection-timeout: 10s
     uris: http://192.168.136.101:9200
+  rabbitmq:
+    username: lei
+    password: 123456
+    virtual-host: /
+    host: 192.168.136.101
+    port: 5672
   jackson:
     date-format: "yyyy-MM-dd HH:mm:ss"
 logging:
@@ -21,4 +27,5 @@ logging:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
+  type-aliases-package: cn.itcast.hotel.pojo
 

@@ -135,12 +135,13 @@ class HotelDemoApplicationTests {
     //保持单条内容(对象)到文档
     @Test
     public void saveDocument() throws IOException {
-        Hotel hotel = hotelService.getById(39141L);
+        Hotel hotel = hotelService.getById(60223);
         HotelDoc hotelDoc = new HotelDoc(hotel);
-        IndexRequest<HotelDoc> hotelIndexRequest = new IndexRequest.Builder<HotelDoc>().index("hotel").id("0")
+        IndexRequest<HotelDoc> hotelIndexRequest = new IndexRequest.Builder<HotelDoc>().index("hotel").id(String.valueOf(60223))
                 .document(hotelDoc)
                 .build();
         IndexResponse indexResponse = client.index(hotelIndexRequest);
+
         System.out.println(indexResponse);
     }
 

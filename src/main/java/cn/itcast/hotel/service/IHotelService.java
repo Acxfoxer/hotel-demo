@@ -30,4 +30,16 @@ public interface IHotelService extends IService<Hotel> {
      * @return
      */
     List<String> getSuggestions(String prefix);
+
+    /**
+     * es 新增,修改酒店接口
+     * @param id 酒店id
+     */
+    void insertById(Long id);
+    /**
+     * es 删除酒店接口
+     * @param id 酒店id
+     */
+    void deleteById(Long id);
+
 }

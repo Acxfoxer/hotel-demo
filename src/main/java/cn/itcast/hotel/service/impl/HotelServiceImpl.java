@@ -15,8 +15,7 @@ import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.Suggestion;
@@ -30,6 +29,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements IHotelService {
@@ -39,7 +39,6 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
 
     /**
      * 根据条件过滤查询
-     *
      * @param params 前端传递的分页查询参数
      * @return 返回分页结果
      * @throws IOException 抛出异常
@@ -61,14 +60,14 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         SearchRequest searchRequest = new SearchRequest.Builder().index("hotel")
                 .query(functionScoreQuery._toQuery())
                 .sort(sortOption)
-                .from(params.getPage() - 1).size(params.getSize()).build();
+                .from(params.getPage()-1).size(params.getSize()).build();
         SearchResponse<HotelDoc> response = client.search(searchRequest, HotelDoc.class);
         return getPageResult(response);
     }
 
     /**
      * 城市,星级,品牌,价格动态变化
-     * @return
+     * @return 返回结果集
      */
     @Override
     public Map<String, List<String>> filters(RequestParams params) {
@@ -95,7 +94,10 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         result.put("starName", getList(aggregations,"star_agg"));
         return result;
     }
-
+    /**
+     * 构造suggestion条件
+     * @return 返回结果集
+     */
     @Override
     public List<String> getSuggestions(String prefix) {
         //创建suggestion构造器
@@ -132,6 +134,74 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         return list;
     }
 
+    /**
+     * es 新增,修改酒店接口
+     * @param id 酒店id
+     */
+    @Override
+    public void insertById(Long id) {
+        try {
+            //1.查询新的酒店信息
+            Hotel hotel = getById(id);
+            //2.转变为HotelDoc
+            HotelDoc hotelDoc = new HotelDoc(hotel);
+            //3.查询es的文档id
+            String docId = getDocId(id);
+            //3.3修改对象
+            IndexRequest<HotelDoc> request = new IndexRequest.Builder<HotelDoc>()
+                    .index("hotel")
+                    .id(docId)
+                    .document(hotelDoc).build();
+            IndexResponse indexResponse = client.index(request);
+        } catch (IOException e) {
+            throw new RuntimeException("请求暂时无法响应,请稍后再试");
+        }
+
+    }
+    /**
+     * es 删除酒店接口
+     * @param id 酒店id
+     */
+    @Override
+    public void deleteById(Long id) {
+        try {
+            DeleteResponse response = client.delete(d -> d.index("hotel").id(getDocId(id)));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 获取文档id
+     * @param id 酒店id
+     * @return 返回文档id,文档不存在,则返回酒店id作为新增文档id
+     */
+    private String getDocId(Long id){
+        try {
+            SearchResponse<HotelDoc> response = client.search(s -> s
+                    .index("hotel")
+                    .query(q -> q
+                            .match(m -> m
+                                    .field("id")
+                                    .query(id))), HotelDoc.class);
+            String docId=null;
+            if(response.hits().hits()!=null){
+                for (Hit<HotelDoc> hit : response.hits().hits()) {
+                    //获取文档id
+                    if(hit.source()!=null){
+                        if(Objects.equals(hit.source().getId(), id)){
+                            docId=hit.id();
+                        }
+                    }
+                }
+                return String.valueOf(docId);
+            }else {
+                return String.valueOf(id);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     /**
      * 封装聚合后的结果
      * @param aggregations 聚合函数
