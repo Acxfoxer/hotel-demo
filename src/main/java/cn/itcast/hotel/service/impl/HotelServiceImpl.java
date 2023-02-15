@@ -60,7 +60,7 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         SearchRequest searchRequest = new SearchRequest.Builder().index("hotel")
                 .query(functionScoreQuery._toQuery())
                 .sort(sortOption)
-                .from(params.getPage()-1).size(params.getSize()).build();
+                .from((params.getPage()-1)*params.getSize()).size(params.getSize()).build();
         SearchResponse<HotelDoc> response = client.search(searchRequest, HotelDoc.class);
         return getPageResult(response);
     }
