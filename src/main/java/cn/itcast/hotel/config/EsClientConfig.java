@@ -57,6 +57,11 @@ public class EsClientConfig {
     public ElasticsearchAsyncClient elasticsearchAsyncClient() {
         return new ElasticsearchAsyncClient(getTransport());
     }
+
+    /**
+     * ElasticsearchClient 账户密码,host,设置
+     * @return 返回transport
+     */
     public ElasticsearchTransport getTransport(){
         HttpHost httpHost = HttpHost.create(hosts);
         RestClient restClient = RestClient.builder(httpHost)

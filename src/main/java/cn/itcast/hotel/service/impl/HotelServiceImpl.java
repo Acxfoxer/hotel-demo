@@ -21,6 +21,7 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.Suggestion;
 import co.elastic.clients.json.JsonData;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.elasticsearch.search.sort.SortBuilders;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements IHotelService {
@@ -250,11 +250,12 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         if ("default".equals(params.getSortBy())) {
             //广告优先
             sortOptions = sort.field(f -> f.field("isAD").order(SortOrder.Desc)).build();
+            sortOptionsList.add(sortOptions);
         } else {
             //其余按照评价跟价格升序排序
             sortOptions = sort.field(f -> f.field(params.getSortBy()).order(SortOrder.Asc)).build();
+            sortOptionsList.add(sortOptions);
         }
-        sortOptionsList.add(sortOptions);
         params.setLocation("31.034661,121.612282");
         //地理位置排序
         if (!"".equals(params.getLocation()) && params.getLocation() != null) {
@@ -299,7 +300,7 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
         // 过滤价格条件
         if (params.getMinPrice() != null && params.getMaxPrice() != null) {
             RangeQuery rangeQuery = rangeBuilder.field("price").gte(JsonData.of(params.getMinPrice()))
-                    .lte(JsonData.of(params.getMaxPrice())).build();
+                    .lt(JsonData.of(params.getMaxPrice())).build();
             boolBuilder.filter(rangeQuery._toQuery());
         }
         //搜索框查询是模糊查询,构造默许查询构造器

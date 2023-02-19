@@ -6,7 +6,7 @@ import cn.itcast.hotel.service.IHotelService;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.mapping.*;
-import co.elastic.clients.elasticsearch._types.query_dsl.MatchAllQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.elasticsearch.core.search.HighlightField;
@@ -14,21 +14,11 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.TotalHits;
 import co.elastic.clients.elasticsearch.indices.*;
 import co.elastic.clients.json.JsonData;
-import co.elastic.clients.json.jackson.JacksonJsonpMapper;
-import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.elasticsearch.client.RestClient;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-
 
 import java.io.IOException;
 import java.util.Collections;
@@ -319,5 +309,51 @@ class HotelDemoApplicationTests {
                 .highlight(h -> h.fields("name", HighlightField.of(f -> f.requireFieldMatch(false)))), HotelDoc.class);
         System.out.println("高亮的总条数为:"+response.hits().total().value());
         response.hits().hits().forEach(hit-> System.out.println(hit.highlight()));
+    }
+
+    /**
+     * 测试算分函数
+     */
+    @Test
+    void testFunctions()throws IOException{
+        SearchResponse<HotelDoc> search = client.search(s -> s
+                .index("hotel")
+                .query(q -> q
+                        .functionScore(f -> f
+                                .query(qq -> qq
+                                        .match(m -> m
+                                                .field("name")
+                                                .query("酒店")))
+                                .functions(fe -> fe
+                                        .filter(fl -> fl
+                                                .term(t -> t
+                                                        .field("brand")
+                                                        .value("如家")))
+                                        .weight(100.0))
+                                .boostMode(FunctionBoostMode.Replace)))
+                .size(200), HotelDoc.class);
+        TotalHits total = search.hits().total();
+        System.out.println(total);;
+    }
+
+    /**
+     * 测试算分函数1
+     */
+    @Test
+    void testFunctions1()throws IOException{
+        MatchQuery.Builder mQuery = new MatchQuery.Builder();
+        //设置match查询
+        MatchQuery matchQuery = mQuery.field("name").query("酒店").build();
+        //term查询
+        TermQuery termQuery = new TermQuery.Builder().field("brand").value("如家").build();
+        //构建算分查询
+        Query query = QueryBuilders
+                .functionScore(f -> f
+                        .query(matchQuery._toQuery())
+                        .functions(fu -> fu.filter(termQuery._toQuery()).weight(100.0))
+                        .boostMode(FunctionBoostMode.Replace));
+        SearchResponse<HotelDoc> response = client.search(s -> s.index("hotel").query(query), HotelDoc.class);
+        TotalHits total = response.hits().total();
+        System.out.println(total);;
     }
 }
