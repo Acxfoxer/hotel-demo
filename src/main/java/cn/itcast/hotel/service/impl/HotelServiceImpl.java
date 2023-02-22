@@ -36,7 +36,6 @@ public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements
     @Resource(name = "client")
     private ElasticsearchClient client;
 
-
     /**
      * 根据条件过滤查询
      * @param params 前端传递的分页查询参数
